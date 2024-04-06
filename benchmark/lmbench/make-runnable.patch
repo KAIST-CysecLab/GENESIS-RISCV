@@ -1,0 +1,111 @@
+diff -Naru lmbench-3.0-a1/scripts/build lmbench-3.0-a1-patched/scripts/build
+--- lmbench-3.0-a1/scripts/build	2002-10-28 20:21:27.000000000 +0800
++++ lmbench-3.0-a1-patched/scripts/build	2022-09-22 19:19:59.395846701 +0800
+@@ -152,5 +152,8 @@
+ # echo Building for $(TARGET)
+ if [ ! -d ${BINDIR} ]; then mkdir -p ${BINDIR}; fi
+ 
++LDLIBS="${LDLIBS} -ltirpc"
++CFLAGS="${CFLAGS} -I/usr/include/tirpc"
++
+ # now go ahead and build everything!
+ ${MAKE} CC="${CC}" CFLAGS="${CFLAGS}" LDLIBS="${LDLIBS}" O="${BINDIR}" $*
+diff -Naru lmbench-3.0-a1/scripts/lmbench lmbench-3.0-a1-patched/scripts/lmbench
+--- lmbench-3.0-a1/scripts/lmbench	2002-10-28 20:21:27.000000000 +0800
++++ lmbench-3.0-a1-patched/scripts/lmbench	2022-09-22 20:53:18.437318687 +0800
+@@ -63,7 +63,7 @@
+ # Figure out as much stuff as we can about this system.
+ # Sure would be nice if everyone had SGI's "hinv".
+ echo \[lmbench3.0 results for `uname -a`] 1>&2
+-echo \[LMBENCH_VER: `cat ../../src/bk.ver`] 1>&2
++echo \[LMBENCH_VER: `cat ../src/bk.ver`] 1>&2
+ echo \[BENCHMARK_HARDWARE: ${BENCHMARK_HARDWARE}] 1>&2
+ echo \[BENCHMARK_OS: ${BENCHMARK_OS}] 1>&2
+ echo \[ALL: ${ALL}] 1>&2
+@@ -234,14 +234,14 @@
+ 
+ date >> ${OUTPUT}
+ echo Local networking >> ${OUTPUT}
+-if [ ! -d ../../src/webpage-lm ]
+-then	(cd ../../src && tar xf webpage-lm.tar)
++if [ ! -d ../src/webpage-lm ]
++then	(cd ../src && tar xf webpage-lm.tar)
+ 	sync
+ 	sleep 1
+ fi
+ SERVERS="lat_udp lat_tcp lat_rpc lat_connect bw_tcp"
+ for server in $SERVERS; do $server -s; done
+-DOCROOT=../../src/webpage-lm lmhttp 8008 &
++DOCROOT=../src/webpage-lm lmhttp 8008 &
+ sleep 2;
+ 
+ if [ X$BENCHMARK_OS = XYES -o X$BENCHMARK_UDP = XYES ]; then
+@@ -277,15 +277,15 @@
+ 
+ if [ X$BENCHMARK_OS = XYES -o X$BENCHMARK_HTTP = XYES ]; then
+ 	# I want a hot cache number
+-	lat_http localhost 8008 < ../../src/webpage-lm/URLS > /dev/null 2>&1
+-	lat_http localhost 8008 < ../../src/webpage-lm/URLS
++	lat_http localhost 8008 < ../src/webpage-lm/URLS > /dev/null 2>&1
++	lat_http localhost 8008 < ../src/webpage-lm/URLS
+ fi
+ lat_http -S localhost 8008
+ 
+ for remote in $REMOTE 
+ do
+ 	echo Networking to $remote >> ${OUTPUT}
+-	$RCP $SERVERS lmhttp ../../src/webpage-lm.tar ${remote}:/tmp
++	$RCP $SERVERS lmhttp ../src/webpage-lm.tar ${remote}:/tmp
+ 	for server in $SERVERS
+ 	do	$RSH $remote -n /tmp/$server -s &
+ 	done
+@@ -324,8 +324,8 @@
+ 
+ 	if [ X$BENCHMARK_OS = XYES -o X$BENCHMARK_HTTP = XYES ]; then
+ 		# I want a hot cache number
+-		lat_http $remote 8008 < ../../src/webpage-lm/URLS > /dev/null 2>&1
+-		lat_http $remote 8008 < ../../src/webpage-lm/URLS
++		lat_http $remote 8008 < ../src/webpage-lm/URLS > /dev/null 2>&1
++		lat_http $remote 8008 < ../src/webpage-lm/URLS
+ 	fi
+ 	lat_http -S $remote 8008
+ 
+diff -Naru lmbench-3.0-a1/scripts/results lmbench-3.0-a1-patched/scripts/results
+--- lmbench-3.0-a1/scripts/results	2002-10-28 20:21:27.000000000 +0800
++++ lmbench-3.0-a1-patched/scripts/results	2022-09-22 20:39:51.462384233 +0800
+@@ -4,7 +4,7 @@
+ 
+ OS=`../scripts/os`
+ CONFIG=`../scripts/config`
+-RESULTS=results/$OS
++RESULTS=results/riscv64
+ BASE=../$RESULTS/`uname -n`
+ EXT=0
+ 
+@@ -26,13 +26,6 @@
+ cd ../bin/$OS 
+ export SYNC_MAX
+ export OUTPUT
+-../../scripts/lmbench $CONFIG 2>../${RESULTS}
++../scripts/lmbench $CONFIG 2> ${RESULTS}
+ 
+-if [ X$MAIL = Xyes ]
+-then	echo Mailing results
+-	(echo ---- $INFO ---
+-	cat $INFO 
+-	echo ---- $RESULTS ---
+-	cat ../$RESULTS) | mail lmbench3@bitmover.com 
+-fi
+ exit 0
+diff -Naru lmbench-3.0-a1/src/disk.c lmbench-3.0-a1-patched/src/disk.c
+--- lmbench-3.0-a1/src/disk.c	2002-10-28 20:21:27.000000000 +0800
++++ lmbench-3.0-a1-patched/src/disk.c	2022-09-22 19:31:36.050017415 +0800
+@@ -291,7 +291,7 @@
+ #ifdef	__linux__
+ 	extern	loff_t llseek(int, loff_t, int);
+ 
+-	if (llseek(fd, (loff_t)off, SEEK_SET) == (loff_t)-1) {
++	if (lseek(fd, (loff_t)off, SEEK_SET) == (loff_t)-1) {
+ 		return(-1);
+ 	}
+ 	return (0);
